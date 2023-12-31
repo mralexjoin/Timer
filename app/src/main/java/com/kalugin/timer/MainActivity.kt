@@ -11,15 +11,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var mainThreadHandler: Handler? = null
     private var vibrator: Vibrator? = null
-    private var count = -1
-        set(value) {
-            field = value
-            binding.timerCountdownTextView.text = when {
-                count > 0 -> count.toString()
-                count == 0 -> getString(R.string.timerDone)
-                else -> ""
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,52 +20,66 @@ class MainActivity : AppCompatActivity() {
         mainThreadHandler = Handler(Looper.getMainLooper())
         vibrator = defaultVibrator(applicationContext)
 
-        val timerSettingEditText = binding.timerSettingEditText.apply {
-            filters = arrayOf(EditTextInputFilter { value ->
-                try {
-                    value.toInt() in MIN_SETTING..MAX_SETTING
-                } catch (_: NumberFormatException) {
-                    false
-                }
-            })
-        }
-        binding.startTimerButton.setOnClickListener {
-            val countText = timerSettingEditText.text.toString()
-            if (countText.isNotBlank()) {
-                count = countText.toInt()
+        binding.apply {
+            timerSettingEditText.apply {
+                filters = arrayOf(EditTextInputFilter { value ->
+                    try {
+                        value.toInt() in MIN_SETTING..MAX_SETTING
+                    } catch (_: NumberFormatException) {
+                        false
+                    }
+                })
+            }
+            startTimerButton.setOnClickListener {
+                val countText = binding.timerSettingEditText.text.toString()
+                if (countText.isNotBlank()) {
+                    val startTime = System.currentTimeMillis()
+                    val duration = countText.toLong() * ONE_SECOND
 
-                it.isEnabled = false
-                binding.resetTimerButton.isEnabled = true
-                mainThreadHandler?.postDelayed(
-                    object : Runnable {
-                        override fun run() {
-                            count--
-                            if (count > 0) {
-                                mainThreadHandler?.postDelayed(this, ONE_SECOND)
-                            } else {
-                                it.isEnabled = true
-                                binding.resetTimerButton.isEnabled = false
-                                vibrator?.vibrateOneShot(VIBRATION_DURATION)
-                            }
-                        }
-                    }, ONE_SECOND
-                )
+                    setTimerButtons(true)
+                    startUpdateTimer(startTime, duration)
+                }
+            }
+            resetTimerButton.setOnClickListener {
+                resetTimer()
             }
         }
+    }
 
-        binding.resetTimerButton.setOnClickListener {
-            mainThreadHandler?.removeCallbacksAndMessages(null)
-            count = -1
-
-            binding.startTimerButton.isEnabled = true
-            it.isEnabled = false
+    private fun startUpdateTimer(startTime: Long, duration: Long) {
+        val elapsedTime = System.currentTimeMillis() - startTime
+        val remainingTime = duration - elapsedTime
+        if (remainingTime > 0) {
+            val seconds = remainingTime / ONE_SECOND
+            binding.timerCountdownTextView.text =
+                getString(R.string.timeFormat, seconds / 60, seconds % 60)
+            mainThreadHandler?.postDelayed(
+                { startUpdateTimer(startTime, duration) }, DELAY
+            )
+        } else {
+            binding.timerCountdownTextView.text = getString(R.string.timerDone)
+            vibrator?.vibrateOneShot(VIBRATION_DURATION)
+            setTimerButtons(false)
         }
+    }
+
+    private fun resetTimer() {
+        mainThreadHandler?.removeCallbacksAndMessages(null)
+        binding.timerCountdownTextView.text = ""
+
+        setTimerButtons(false)
+    }
+
+    private fun setTimerButtons(timerActive: Boolean) {
+        binding.startTimerButton.isEnabled = !timerActive
+        binding.resetTimerButton.isEnabled = timerActive
     }
 
     private companion object {
         const val ONE_SECOND = 1_000L
+        const val DELAY = ONE_SECOND
         const val MIN_SETTING = 1
-        const val MAX_SETTING = 3_600
+        const val MAX_SETTING = 3_599
 
         const val VIBRATION_DURATION = 500L
     }

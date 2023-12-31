@@ -4,4 +4,5 @@
     <string name="startTimer">Start!</string>
     <string name="timerDone">Done!</string>
     <string name="resetTimer">Reset</string>
+    <string name="timeFormat">%d:%02d</string>
 </resources>
