@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Timer</string>
+    <string name="timerSettingHint">Seconds</string>
+    <string name="startTimer">Start!</string>
+    <string name="timerDone">Done!</string>
+    <string name="resetTimer">Reset</string>
+</resources>
